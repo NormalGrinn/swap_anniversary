@@ -1,0 +1,112 @@
+use std::env;
+use std::time::Duration;
+
+use poise::serenity_prelude as serenity;
+use poise::CreateReply;
+use poise::futures_util::{future::select, StreamExt, FutureExt};
+use ::serenity::all::CreateActionRow;
+use ::serenity::all::CreateButton;
+use ::serenity::all::MessageCollector;
+use ::serenity::futures::future::Either;
+
+use crate::database::get_userinfo_by_id;
+use crate::Context;
+
+pub async fn ensure_dm(ctx: &Context<'_>) -> Result<bool, serenity::Error> {
+    let dm_channel = ctx.author().create_dm_channel(&ctx.serenity_context().http).await?;
+    let channel_id = dm_channel.id;
+
+    if ctx.channel_id() != channel_id {
+        ctx.send(
+            CreateReply::default()
+                .content("This command is only allowed to be used in DMs")
+                .ephemeral(true),
+        )
+        .await?;
+        return Ok(false);
+    }
+
+    Ok(true)
+}
+
+pub async fn ensure_joined(ctx: &Context<'_>) -> Result<bool, serenity::Error> {
+    let user_id = ctx.author().id.get();
+    match get_userinfo_by_id(user_id).await {
+        Ok(_) => Ok(true),
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("You have not joined the event yet")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
+pub async fn ensure_host_role(ctx: &Context<'_>, user: &serenity::User) -> Result<bool, serenity::Error> {
+    let guild_id_int: u64 = env::var("GUILD_ID")
+    .expect("Missing `GUILD_ID` env var, see README for more information.")
+    .parse().expect("Error parsing guild id to int");
+    let role_id_int: u64 = env::var("HOST_ROLE")
+    .expect("Missing `HOST_ROLE` env var, see README for more information.")
+    .parse().expect("Error parsing host id to int");
+
+    let guild_id = serenity::GuildId::new(guild_id_int);
+    let role_id = serenity::RoleId::new(role_id_int);
+
+    let res = user.has_role(ctx.http(), guild_id, role_id).await?;
+
+    if !res {
+        ctx.send(CreateReply::default().content("You do not have the host role").ephemeral(true)).await?;
+    }
+
+    Ok(res)
+}
+
+pub async fn wait_for_message_with_cancel(ctx: &Context<'_>, message_content: &str) -> Result<Option<String>, serenity::Error> {
+    let time_out = Duration::from_secs(300);
+    let cancel_button = CreateButton::new("Cancel")
+        .label("Cancel action")
+        .style(serenity::all::ButtonStyle::Danger);
+    let buttons: Vec<CreateButton> = vec![cancel_button];
+    let action_row = vec![CreateActionRow::Buttons(buttons)];
+    let message = CreateReply::default().content(message_content)
+    .components(action_row);
+    ctx.send(message).await?;
+
+    let user_id = ctx.author().id;
+    let channel_id = ctx.channel_id();
+
+    let mut message_future = MessageCollector::new(ctx)
+    .author_id(user_id)
+    .channel_id(channel_id)
+    .timeout(time_out)
+    .stream();
+
+    let mut cancel_future = serenity::collector::ComponentInteractionCollector::new(ctx)
+    .timeout(time_out)
+    .filter(move |interaction| {
+        interaction.data.custom_id == "Cancel" && interaction.user.id == user_id
+    })
+    .stream();
+
+    let message_fut = message_future.next().fuse();
+    let cancel_fut = cancel_future.next().fuse();
+
+    let result = select(message_fut, cancel_fut).await;
+
+    match result {
+        Either::Left((Some(message), _)) => {
+            return Ok(Some(message.content.clone()))
+        }
+        Either::Right((Some(_cancel), _)) => {
+            ctx.say("Command cancelled").await?;
+        }
+        _ => {
+            ctx.say("Command timed out").await?;
+        }
+    }
+    return Ok(None)
+}

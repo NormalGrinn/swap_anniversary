@@ -1,0 +1,4 @@
+/target
+/databases
+.env
+Cargo.lock
