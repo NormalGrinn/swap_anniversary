@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{utilities::ensure_host_role, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 use serenity::all::{CreateActionRow, CreateButton};
@@ -7,6 +7,7 @@ use serenity::all::{CreateActionRow, CreateButton};
 pub async fn create_button(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
+    if !ensure_host_role(&ctx, ctx.author()).await? {return Ok(())}
     let join_button = CreateButton::new("Join")
         .label("Join the anniversary event")
         .style(serenity::all::ButtonStyle::Primary);
