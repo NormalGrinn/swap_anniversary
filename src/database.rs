@@ -166,6 +166,7 @@ pub async fn claim_letter(claimer: u64, letter_owner: u64) -> Result<()> {
     Ok(())
 }
 
+// Check if the owner of the letter has had their letter claimed
 pub async fn check_if_claimed(owner_id: u64) -> Result<bool> {
     const CLAIMED_QUERY: &str = "
     SELECT COUNT(claimee_id) FROM claimed_letters WHERE owner_id = ?1
@@ -179,6 +180,7 @@ pub async fn check_if_claimed(owner_id: u64) -> Result<bool> {
     return Ok(count != 0)
 }
 
+// Check if the user has claimed a letter
 pub async fn check_if_has_claimed(claimee_id: u64) -> Result<bool> {
     const CLAIMED_QUERY: &str = "
     SELECT COUNT(*) FROM claimed_letters WHERE claimee_id = ?1
@@ -192,15 +194,6 @@ pub async fn check_if_has_claimed(claimee_id: u64) -> Result<bool> {
     return Ok(count != 0)
 }
 
-
-/*
-    pub id: String,
-    pub character_image_url: String,
-    pub character_name: String,
-    pub letter_content: String,
-    pub giftee_name: Option<String>,
-    pub santa_name: Option<String>,
-*/
 pub async fn get_all_letters() -> Result<Vec<types::Letter>> {
     const LETTER_QUERY: &str = "
     SELECT
@@ -240,4 +233,19 @@ pub async fn get_all_letters() -> Result<Vec<types::Letter>> {
         }
     }
     Ok(letters)
+}
+
+pub async fn get_giftee(santa_id: u64) -> Result<u64> {
+    const GET_GIFTEE: &str = "
+    SELECT owner_id 
+    FROM claimed_letters
+    WHERE claimee_id = (?1);
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_GIFTEE)?;
+    let giftee: u64 = query.query_row(params![santa_id], |row| row.get(0))?;
+    Ok(giftee)
 }
