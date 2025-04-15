@@ -20,14 +20,19 @@ pub async fn write_giftee(
             match database::get_giftee(user_id).await {
                 Ok(giftee) => {
                     let giftee_id = UserId::new(giftee);
+                    let user_name: String;
+                    match giftee_id.to_user(ctx.http()).await {
+                        Ok(u) => {user_name = u.name},
+                        Err(_) => {user_name = "giftee".to_string()},
+                    }
                     let embed = utilities::embed_builder(&message, 
                         "Your Santa sent you a message", 
-                        "Dear giftee", 
+                        &format!("Dear {}", user_name), 
                         "Love, Santa");
                     let giftee_message = CreateMessage::new().embed(embed);
                     match giftee_id.dm(&ctx.http(), giftee_message).await {
                         Ok(_) => {
-                            ctx.say("Message sent succesfully").await?;
+                            ctx.say("Message sent succesfully to your giftee").await?;
                         },
                         Err(e) => {
                             ctx.say("An error occured sending your message").await?;

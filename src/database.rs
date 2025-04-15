@@ -249,3 +249,18 @@ pub async fn get_giftee(santa_id: u64) -> Result<u64> {
     let giftee: u64 = query.query_row(params![santa_id], |row| row.get(0))?;
     Ok(giftee)
 }
+
+pub async fn get_santa(giftee_id: u64) -> Result<u64> {
+    const GET_SANTA: &str = "
+    SELECT claimee_id
+    FROM claimed_letters
+    WHERE owner_id = (?1);
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_SANTA)?;
+    let santa: u64 = query.query_row(params![giftee_id], |row| row.get(0))?;
+    Ok(santa)
+}
