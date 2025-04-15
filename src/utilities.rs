@@ -6,9 +6,16 @@ use poise::CreateReply;
 use poise::futures_util::{future::select, StreamExt, FutureExt};
 use ::serenity::all::CreateActionRow;
 use ::serenity::all::CreateButton;
+use ::serenity::all::CreateEmbed;
+use ::serenity::all::CreateEmbedFooter;
+use ::serenity::all::Embed;
+use ::serenity::all::EmbedField;
+use ::serenity::all::EmbedFooter;
 use ::serenity::all::MessageCollector;
 use ::serenity::futures::future::Either;
+use ::serenity::model::colour;
 
+use crate::database;
 use crate::database::get_userinfo_by_id;
 use crate::Context;
 
@@ -43,6 +50,87 @@ pub async fn ensure_joined(ctx: &Context<'_>) -> Result<bool, serenity::Error> {
             return Ok(false);
         },
     }
+}
+
+pub async fn ensure_has_giftee(ctx: &Context<'_>) -> Result<bool, serenity::Error> {
+    let user_id = ctx.author().id.get();
+    match database::check_if_has_claimed(user_id).await {
+        Ok(b) => {
+            if b {
+                Ok(true)
+            } else {
+                ctx.send(
+                    CreateReply::default()
+                        .content("You do not have a giftee")
+                        .ephemeral(true),
+                )
+                .await?;
+                return Ok(false);
+            }
+        },
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("An error occured checking if you have a giftee")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
+pub async fn ensure_has_santa(ctx: &Context<'_>) -> Result<bool, serenity::Error> {
+    let user_id = ctx.author().id.get();
+    match database::check_if_claimed(user_id).await {
+        Ok(b) => {
+            if b {
+                Ok(true)
+            } else {
+                ctx.send(
+                    CreateReply::default()
+                        .content("You do not have a santa")
+                        .ephemeral(true),
+                )
+                .await?;
+                return Ok(false);
+            }
+        },
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("An error occured checking if you have a santa")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
+pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str) -> Result<bool, serenity::Error> {
+    if message.len() > 1000 {
+        ctx.send(
+            CreateReply::default()
+                .content("Your message is over 1000 characters")
+                .ephemeral(true),
+        )
+        .await?;
+        return Ok(false);
+    }
+    Ok(true)
+}
+
+pub fn embed_builder(message: &str, title: &str, hello_message: &str, goodbye_message: &str) -> serenity::CreateEmbed {
+    let footer = CreateEmbedFooter::new("Swap Anniversary");
+
+    let create_embed = CreateEmbed::new().footer(footer)
+        .field(hello_message, message, false)
+        .field("", goodbye_message, false)
+        .color(colour::Colour::MAGENTA)
+        .title(title);
+
+    create_embed
 }
 
 pub async fn ensure_host_role(ctx: &Context<'_>, user: &serenity::User) -> Result<bool, serenity::Error> {
