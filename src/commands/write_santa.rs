@@ -1,4 +1,4 @@
-use crate::{database, utilities::{self, ensure_dm, ensure_embed_field_lenght, ensure_has_giftee, ensure_has_santa, ensure_joined, wait_for_message_with_cancel}, Context, Error};
+use crate::{database, utilities::{self, ensure_dm, ensure_embed_field_lenght, ensure_has_santa, ensure_joined, wait_for_message_with_cancel}, Context, Error};
 use rusqlite::Result;
 use serenity::all::{CreateMessage, UserId};
 

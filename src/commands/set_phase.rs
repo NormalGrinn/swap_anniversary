@@ -1,4 +1,4 @@
-use crate::{database, utilities::ensure_host_role, Context, Error};
+use crate::{utilities::ensure_host_role, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 
@@ -16,8 +16,9 @@ pub async fn set_phase(
     } else {
         let key = "PHASE";
         std::env::set_var(key, phase.to_string());
+        let message = format!("You have successfully set the phase to: {}", phase);
         ctx.send(CreateReply::default()
-        .content("Successfully set the phase")
+        .content(message)
         .ephemeral(true)).await?;
     }
     Ok(())

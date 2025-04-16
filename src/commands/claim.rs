@@ -1,4 +1,4 @@
-use crate::{database, utilities::{ensure_joined}, Context, Error};
+use crate::{database, utilities::ensure_joined, Context, Error};
 use poise::CreateReply;
 use rust_fuzzy_search::fuzzy_compare;
 use serenity::futures;
