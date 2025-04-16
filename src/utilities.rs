@@ -153,6 +153,22 @@ pub async fn ensure_host_role(ctx: &Context<'_>, user: &serenity::User) -> Resul
     Ok(res)
 }
 
+pub async fn ensure_correct_phase(ctx: &Context<'_>, allowed_phase: Vec<u64>) -> Result<bool, serenity::Error> {
+    let phase = env::var("PHASE")
+    .expect("Missing `PHASE` env var, see README for more information.");
+    let parsed_phase: u64 = phase.parse().expect("Error parsing phase to integer");
+    if !allowed_phase.contains(&parsed_phase) {
+        ctx.send(
+            CreateReply::default()
+                .content("You are trying to run a command that is not allowed in this phase!")
+                .ephemeral(true),
+        )
+        .await?;
+        return Ok(false)
+    } 
+    Ok(true)
+}
+
 pub async fn wait_for_message_with_cancel(ctx: &Context<'_>, message_content: &str) -> Result<Option<String>, serenity::Error> {
     let time_out = Duration::from_secs(300);
     let cancel_button = CreateButton::new("Cancel")
