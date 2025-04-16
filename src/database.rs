@@ -286,3 +286,7 @@ pub async fn get_character_name_and_image(user_id: u64) -> Result<(String, Strin
         )?;
     Ok((char_name, char_url))
 }
+
+pub async fn get_giftee_letter(santa_id: u64) -> Result<String> {
+    todo!()
+}
