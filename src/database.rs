@@ -265,9 +265,9 @@ pub async fn get_santa(giftee_id: u64) -> Result<u64> {
     Ok(santa)
 }
 
-pub async fn get_character_name(user_id: u64) -> Result<String> {
+pub async fn get_character_name_and_image(user_id: u64) -> Result<(String, String)> {
     const GET_CHAR_NAME: &str = "
-    SELECT characters.character_name
+    SELECT characters.character_name, character_image
     FROM characters
     INNER JOIN users USING (character_id)
     WHERE users.discord_id = (?1);
@@ -277,6 +277,12 @@ pub async fn get_character_name(user_id: u64) -> Result<String> {
         e
     })?;
     let mut query = conn.prepare(GET_CHAR_NAME)?;
-    let char_name: String = query.query_row(params![user_id], |row| row.get(0))?;
-    Ok(char_name)
+    let (char_name, char_url): (String, String) = query.query_row(params![user_id], 
+        |row| 
+        Ok((
+            row.get(0)?,
+            row.get(1)?)
+        )
+        )?;
+    Ok((char_name, char_url))
 }
