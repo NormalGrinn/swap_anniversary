@@ -33,6 +33,7 @@ async fn main() {
                                 commands::claim::claim(),
                                 commands::write_giftee::write_giftee(),
                                 commands::write_santa::write_santa(),
+                                commands::set_phase::set_phase(),
                                 ],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(components::button_interaction::on_component_interaction(ctx, event, framework, data))
