@@ -1,4 +1,4 @@
-use serenity::all::{CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, FullEvent, Interaction};
+use serenity::all::{CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateMessage, FullEvent, Interaction};
 
 use crate::{database, Data, Error};
 
@@ -31,6 +31,19 @@ pub async fn on_component_interaction(
                                 let message = CreateInteractionResponseFollowup::new()
                                     .content("Joined the event!").ephemeral(true);
                                 component_interaction.create_followup(&ctx.http, message).await?;
+                                let char_name = database::get_character_name(user_id).await;
+                                match char_name {
+                                    Ok(ch) => {
+                                        let join_dm = format!("You have successfully joined the event, you will appear as {}", ch);
+                                        let message = CreateMessage::default().content(join_dm);
+                                        component_interaction.user.dm(&ctx.http, message).await?;
+                                    },
+                                    Err(e) => {
+                                        let message = CreateMessage::default().content("You succesfully joined the event!");
+                                        component_interaction.user.dm(&ctx.http, message).await?;
+                                        eprintln!("Error fetching character_name: {}", e);
+                                    },
+                                }
                             },
                             _ => {
                                 let message = CreateInteractionResponseFollowup::new()

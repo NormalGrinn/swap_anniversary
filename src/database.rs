@@ -264,3 +264,19 @@ pub async fn get_santa(giftee_id: u64) -> Result<u64> {
     let santa: u64 = query.query_row(params![giftee_id], |row| row.get(0))?;
     Ok(santa)
 }
+
+pub async fn get_character_name(user_id: u64) -> Result<String> {
+    const GET_CHAR_NAME: &str = "
+    SELECT characters.character_name
+    FROM characters
+    INNER JOIN users USING (character_id)
+    WHERE users.discord_id = (?1);
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_CHAR_NAME)?;
+    let char_name: String = query.query_row(params![user_id], |row| row.get(0))?;
+    Ok(char_name)
+}
