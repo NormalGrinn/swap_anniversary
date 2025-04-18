@@ -31,9 +31,7 @@ pub async fn on_component_interaction(
                                 let message = CreateInteractionResponseFollowup::new()
                                     .content("Joined the event!").ephemeral(true);
                                 component_interaction.create_followup(&ctx.http, message).await?;
-                                let (char_name, char_url) = database::get_character_name_and_image(user_id).await?;
-                                let join_dm = format!("You have successfully joined the event, you will appear as [{}]({})", 
-                                char_name, char_url);
+                                let join_dm = format!("You have successfully joined the event, you will appear as a random character, **DO NOT** share who this is.");
                                 let message = CreateMessage::default().content(join_dm);
                                 component_interaction.user.dm(&ctx.http, message).await?;
                                 }

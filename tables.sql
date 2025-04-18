@@ -9,6 +9,7 @@ CREATE TABLE users (
     username TEXT UNIQUE,
     character_id INTEGER,
     letter TEXT,
+    submitted_gift TEXT,
     FOREIGN KEY(character_id) REFERENCES characters(character_id)
 );
 

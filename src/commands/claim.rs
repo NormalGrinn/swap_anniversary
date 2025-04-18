@@ -1,4 +1,4 @@
-use crate::{database, utilities::ensure_joined, Context, Error};
+use crate::{database, utilities::{ensure_joined, ensure_no_giftee}, Context, Error};
 use poise::CreateReply;
 use rust_fuzzy_search::fuzzy_compare;
 use serenity::futures;
@@ -28,6 +28,7 @@ pub async fn claim(
     char_name: String
 ) -> Result<(), Error> {
     if !ensure_joined(&ctx).await? {return Ok(())}
+    if !ensure_no_giftee(&ctx, &ctx.author()).await? {return Ok(())}
 
     let author_id = ctx.author().id.get();
     let owner_id = database::get_user_id_by_char_name(char_name).await?;
@@ -45,20 +46,6 @@ pub async fn claim(
         },
         Err(e) => {
             ctx.send(CreateReply::default().content("Error checking if letter has been claimed").ephemeral(true)).await?;
-            eprintln!("Error letter checking query: {}", e);
-            return Ok(())
-        },
-    }
-
-    match database::check_if_has_claimed(author_id).await {
-        Ok(has_claimed) => {
-            if has_claimed {
-                ctx.send(CreateReply::default().content("You have already claimed a letter!").ephemeral(true)).await?;
-                return Ok(())
-            }
-        },
-        Err(e) => {
-            ctx.send(CreateReply::default().content("Error checking if you have already claimed a letter").ephemeral(true)).await?;
             eprintln!("Error letter checking query: {}", e);
             return Ok(())
         },

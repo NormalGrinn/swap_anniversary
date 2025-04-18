@@ -105,6 +105,63 @@ pub async fn ensure_has_santa(ctx: &Context<'_>) -> Result<bool, serenity::Error
     }
 }
 
+// Returns true if there is NO santa, returns false if there is a santa
+pub async fn ensure_no_santa(ctx: &Context<'_>, giftee: &serenity::User) -> Result<bool, serenity::Error> {
+    let giftee_id = giftee.id.get();
+    match database::check_if_claimed(giftee_id).await {
+        Ok(b) => {
+                        if b {
+                            ctx.send(
+                                CreateReply::default()
+                                    .content("You already have a santa")
+                                    .ephemeral(true),
+                            )
+                            .await?;
+                            return Ok(false);
+                        } else {
+                            return Ok(true)
+                        }
+            }
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("An error occured checking if you have a santa")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
+pub async fn ensure_no_giftee(ctx: &Context<'_>, santa: &serenity::User) -> Result<bool, serenity::Error> {
+    let santa_id = santa.id.get();
+    match database::check_if_has_claimed(santa_id).await {
+        Ok(b) => {
+                        if b {
+                            ctx.send(
+                                CreateReply::default()
+                                    .content("You already have a giftee")
+                                    .ephemeral(true),
+                            )
+                            .await?;
+                            return Ok(false);
+                        } else {
+                            return Ok(true)
+                        }
+            }
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("An error occured checking if you have a giftee")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
 pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str) -> Result<bool, serenity::Error> {
     if message.len() > 1000 {
         ctx.send(

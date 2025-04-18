@@ -49,6 +49,7 @@ pub async fn get_userinfo_by_id(user_id: u64) -> Result<types::UserInfo> {
         username: row.get(1)?,
         character_id: row.get(0)?,
         letter: row.get(3)?,
+        submission: row.get(4)?,
     })
     )?;
     Ok(res)
@@ -87,16 +88,29 @@ pub async fn set_letter(user_id: u64, letter_content: &str) -> Result<usize> {
     Ok(updated)
 }
 
-pub async fn leave(user_id: u64) -> Result<usize> {
+pub async fn leave(user_id: u64) -> Result<()> {
     const DELETE_USER: &str = "
     DELETE FROM users
     WHERE discord_id = ?1;
     ";
-    let conn = Connection::open(PATH).map_err(|e| {
+    const DELETE_LETTER_ENTRY: &str = "
+    DELETE FROM claimed_letters
+    WHERE owner_id = ?1;
+    ";
+    const DELETE_SANTA: & str = "
+    UPDATE claimed_letters
+    SET claimee_id = NULL
+    WHERE claimee_id = ?1;
+    ";
+    let mut conn = Connection::open(PATH).map_err(|e| {
         eprintln!("Failed to open database: {}", e);
         e
     })?;
-    let res = conn.execute(DELETE_USER, params![user_id])?;
+    let tx = conn.transaction()?;
+    tx.execute(DELETE_SANTA, params![user_id])?;
+    tx.execute(DELETE_LETTER_ENTRY, params![user_id])?;
+    tx.execute(DELETE_USER, params![user_id])?;
+    let res = tx.commit()?;
     Ok(res)
 }
 
@@ -287,6 +301,55 @@ pub async fn get_character_name_and_image(user_id: u64) -> Result<(String, Strin
     Ok((char_name, char_url))
 }
 
-pub async fn get_giftee_letter(santa_id: u64) -> Result<String> {
-    todo!()
+pub async fn get_giftee_letter(santa_id: u64) -> Result<Option<String>> {
+    const GET_LETTER: &str = "
+    SELECT u.letter
+    FROM claimed_letters cl
+    JOIN users u ON cl.owner_id = u.discord_id
+    WHERE cl.claimee_id = ?;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_LETTER)?;
+    let letter = query.query_row(params![santa_id], 
+        |row| 
+        Ok(row.get(0)?
+        ))?;
+    Ok(letter)
+}
+
+pub async fn get_giftee_name(santa_id: u64) -> Result<String> {
+    const GET_NAME: &str = "
+    SELECT u.username
+    FROM claimed_letters cl
+    JOIN users u ON cl.owner_id = u.discord_id
+    WHERE cl.claimee_id = ?;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_NAME)?;
+    let name = query.query_row(params![santa_id], 
+        |row| 
+        Ok(row.get(0)?
+        ))?;
+    Ok(name)
+}
+
+pub async fn set_submission(santa_id: u64, submission_content: &str) -> Result<()> {
+    const UPDATE_SUBMISSION: &str = "
+    UPDATE users
+    SET submitted_gift = ?1
+    WHERE discord_id = ?2
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(UPDATE_SUBMISSION)?;
+    query.execute(params![submission_content, santa_id])?;
+    Ok(())
 }

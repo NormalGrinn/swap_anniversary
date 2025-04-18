@@ -6,6 +6,7 @@ pub struct UserInfo {
     pub username: String,
     pub character_id: u64,
     pub letter: Option<String>,
+    pub submission: Option<String>
 }
 
 #[derive(Debug, Serialize)]
