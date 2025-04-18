@@ -1,7 +1,7 @@
 use rusqlite::{Connection, Result, params};
 use rand::seq::IndexedRandom;
 
-use crate::types;
+use crate::types::{self, ClaimedLetter, UserInfo};
 
 const PATH: &str = "databases/swapAnniversary.db";
 
@@ -352,4 +352,60 @@ pub async fn set_submission(santa_id: u64, submission_content: &str) -> Result<(
     let mut query = conn.prepare(UPDATE_SUBMISSION)?;
     query.execute(params![submission_content, santa_id])?;
     Ok(())
+}
+
+pub async fn get_all_users() -> Result<Vec<UserInfo>> {
+    const GET_USERS: &str = "
+    SELECT * FROM users;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_USERS)?;
+    let user_iter = query.query_map((), |row|
+    Ok(UserInfo {
+        discord_id: row.get(0)?,
+        username: row.get(1)?,
+        character_id: row.get(2)?,
+        letter: row.get(3)?,
+        submission: row.get(4)?,
+    })
+    )?;
+    let mut users: Vec<UserInfo> = Vec::new();
+    for u in user_iter {
+        match u {
+            Ok(user) => {users.push(user)},
+            Err(_) => {continue;},
+        }
+    }
+    Ok(users)
+}
+
+pub async fn get_all_claimed_letters() -> Result<Vec<ClaimedLetter>> {
+    const GET_CLAIMED_LETTERS: &str = "
+    SELECT * FROM claimed_letters
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_CLAIMED_LETTERS)?;
+    let letter_iter = query.query_map((), |row|
+    Ok(ClaimedLetter {
+        id: row.get(0)?,
+        owner_id: row.get(1)?,
+        owner_name: row.get(2)?,
+        claimee_id: row.get(3)?,
+        claimee_name: row.get(4)?,
+    })
+    )?;
+    let mut letters: Vec<ClaimedLetter> = Vec::new();
+    for l in letter_iter {
+        match l {
+            Ok(letter) => {letters.push(letter)},
+            Err(_) => {continue},
+        }
+    }
+    Ok(letters)
 }

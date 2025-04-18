@@ -1,4 +1,4 @@
-use crate::{database::{self, get_giftee, get_giftee_letter}, utilities::{embed_builder, ensure_dm, ensure_has_giftee, ensure_joined}, Context, Error};
+use crate::{database::{self, get_giftee_letter}, utilities::{embed_builder, ensure_dm, ensure_has_giftee, ensure_joined}, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 
