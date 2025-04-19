@@ -19,6 +19,7 @@ pub async fn status(
     let mut users_without_letters: Vec<(String, u64)> = Vec::new();
     let mut users_without_santas: Vec<(String, u64)> = Vec::new();
     let mut users_without_submissions : Vec<(String, u64)> = Vec::new();
+    let users_without_giftees = database::get_users_without_giftees().await?;
 
     for user in &users {
         if user.letter == None { users_without_letters.push((user.username.clone(), user.discord_id)) }
@@ -27,16 +28,7 @@ pub async fn status(
     for giftee in &letters {
         if giftee.claimee_id == None { users_without_santas.push((giftee.owner_name.clone(), giftee.owner_id));}
     }
-    let claimed_claimee_ids: HashSet<u64> = letters
-        .iter()
-        .filter_map(|cl| cl.claimee_id)
-        .collect();
 
-    let users_without_giftees: Vec<(u64, String)> = users
-        .iter()
-        .filter(|user| !claimed_claimee_ids.contains(&user.discord_id))
-        .map(|user| (user.discord_id, user.username.clone()))
-        .collect();
 
     let mut file = OpenOptions::new()
         .write(true)

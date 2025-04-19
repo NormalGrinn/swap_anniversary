@@ -384,7 +384,15 @@ pub async fn get_all_users() -> Result<Vec<UserInfo>> {
 
 pub async fn get_all_claimed_letters() -> Result<Vec<ClaimedLetter>> {
     const GET_CLAIMED_LETTERS: &str = "
-    SELECT * FROM claimed_letters
+    SELECT
+        cl.letter_id,
+        owner.discord_id AS owner_id,
+        owner.username AS owner_name,
+        claimee.discord_id AS claimee_id,
+        claimee.username AS claimee_name
+    FROM claimed_letters cl
+    JOIN users owner ON cl.owner_id = owner.discord_id
+    LEFT JOIN users claimee ON cl.claimee_id = claimee.discord_id;
     ";
     let conn = Connection::open(PATH).map_err(|e| {
         eprintln!("Failed to open database: {}", e);
@@ -409,3 +417,33 @@ pub async fn get_all_claimed_letters() -> Result<Vec<ClaimedLetter>> {
     }
     Ok(letters)
 }
+
+pub async fn get_users_without_giftees() -> Result<Vec<(String, u64)>> {
+    const GET_USERS_WITHOUT_GIFTEES:  &str = "
+    SELECT username, discord_id
+    FROM users
+    WHERE discord_id NOT IN (
+        SELECT claimee_id
+        FROM claimed_letters
+        WHERE claimee_id IS NOT NULL
+    );
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_USERS_WITHOUT_GIFTEES)?;
+    let mut user_iter = query.query_map((), |row| {
+        let name: String = row.get(0)?;
+        let id: u64 = row.get(1)?;
+        Ok((name, id))
+    })?;
+    let mut users: Vec<(String, u64)> = Vec::new();
+    for user in user_iter {
+        match user {
+            Ok(u) => { users.push(u);},
+            Err(_) => { continue },
+        }
+    }
+    Ok(users)
+} 
