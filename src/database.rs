@@ -446,4 +446,4 @@ pub async fn get_users_without_giftees() -> Result<Vec<(String, u64)>> {
         }
     }
     Ok(users)
-} 
+}
