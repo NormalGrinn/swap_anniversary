@@ -1,4 +1,4 @@
-use serenity::all::{CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, FullEvent, Interaction};
+use serenity::all::{CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateMessage, FullEvent, Interaction};
 
 use crate::{database, Data, Error};
 
@@ -31,7 +31,10 @@ pub async fn on_component_interaction(
                                 let message = CreateInteractionResponseFollowup::new()
                                     .content("Joined the event!").ephemeral(true);
                                 component_interaction.create_followup(&ctx.http, message).await?;
-                            },
+                                let join_dm = format!("You have successfully joined the event, you will appear as a random character, **DO NOT** share who this is.");
+                                let message = CreateMessage::default().content(join_dm);
+                                component_interaction.user.dm(&ctx.http, message).await?;
+                                }
                             _ => {
                                 let message = CreateInteractionResponseFollowup::new()
                                 .content("Unexpected error").ephemeral(true);

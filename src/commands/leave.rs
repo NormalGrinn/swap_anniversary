@@ -1,4 +1,4 @@
-use crate::{database, utilities::{ensure_joined}, Context, Error};
+use crate::{database, utilities::{ensure_correct_phase, ensure_joined}, Context, Error};
 use poise::CreateReply;
 use rusqlite::Result;
 
@@ -7,6 +7,7 @@ pub async fn leave(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
     if !ensure_joined(&ctx).await? {return Ok(())}
+    if !ensure_correct_phase(&ctx, vec![1]).await? {return Ok(())}
 
     let user_id = ctx.author().id.get();
     match database::leave(user_id).await {

@@ -1,7 +1,7 @@
 use rusqlite::{Connection, Result, params};
 use rand::seq::IndexedRandom;
 
-use crate::types;
+use crate::types::{self, ClaimedLetter, UserInfo};
 
 const PATH: &str = "databases/swapAnniversary.db";
 
@@ -49,6 +49,7 @@ pub async fn get_userinfo_by_id(user_id: u64) -> Result<types::UserInfo> {
         username: row.get(1)?,
         character_id: row.get(0)?,
         letter: row.get(3)?,
+        submission: row.get(4)?,
     })
     )?;
     Ok(res)
@@ -87,16 +88,29 @@ pub async fn set_letter(user_id: u64, letter_content: &str) -> Result<usize> {
     Ok(updated)
 }
 
-pub async fn leave(user_id: u64) -> Result<usize> {
+pub async fn leave(user_id: u64) -> Result<()> {
     const DELETE_USER: &str = "
     DELETE FROM users
     WHERE discord_id = ?1;
     ";
-    let conn = Connection::open(PATH).map_err(|e| {
+    const DELETE_LETTER_ENTRY: &str = "
+    DELETE FROM claimed_letters
+    WHERE owner_id = ?1;
+    ";
+    const DELETE_SANTA: & str = "
+    UPDATE claimed_letters
+    SET claimee_id = NULL
+    WHERE claimee_id = ?1;
+    ";
+    let mut conn = Connection::open(PATH).map_err(|e| {
         eprintln!("Failed to open database: {}", e);
         e
     })?;
-    let res = conn.execute(DELETE_USER, params![user_id])?;
+    let tx = conn.transaction()?;
+    tx.execute(DELETE_SANTA, params![user_id])?;
+    tx.execute(DELETE_LETTER_ENTRY, params![user_id])?;
+    tx.execute(DELETE_USER, params![user_id])?;
+    let res = tx.commit()?;
     Ok(res)
 }
 
@@ -264,3 +278,172 @@ pub async fn get_santa(giftee_id: u64) -> Result<u64> {
     let santa: u64 = query.query_row(params![giftee_id], |row| row.get(0))?;
     Ok(santa)
 }
+
+pub async fn get_character_name_and_image(user_id: u64) -> Result<(String, String)> {
+    const GET_CHAR_NAME: &str = "
+    SELECT characters.character_name, character_image
+    FROM characters
+    INNER JOIN users USING (character_id)
+    WHERE users.discord_id = (?1);
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_CHAR_NAME)?;
+    let (char_name, char_url): (String, String) = query.query_row(params![user_id], 
+        |row| 
+        Ok((
+            row.get(0)?,
+            row.get(1)?)
+        )
+        )?;
+    Ok((char_name, char_url))
+}
+
+pub async fn get_giftee_letter(santa_id: u64) -> Result<Option<String>> {
+    const GET_LETTER: &str = "
+    SELECT u.letter
+    FROM claimed_letters cl
+    JOIN users u ON cl.owner_id = u.discord_id
+    WHERE cl.claimee_id = ?;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_LETTER)?;
+    let letter = query.query_row(params![santa_id], 
+        |row| 
+        Ok(row.get(0)?
+        ))?;
+    Ok(letter)
+}
+
+pub async fn get_giftee_name(santa_id: u64) -> Result<String> {
+    const GET_NAME: &str = "
+    SELECT u.username
+    FROM claimed_letters cl
+    JOIN users u ON cl.owner_id = u.discord_id
+    WHERE cl.claimee_id = ?;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_NAME)?;
+    let name = query.query_row(params![santa_id], 
+        |row| 
+        Ok(row.get(0)?
+        ))?;
+    Ok(name)
+}
+
+pub async fn set_submission(santa_id: u64, submission_content: &str) -> Result<()> {
+    const UPDATE_SUBMISSION: &str = "
+    UPDATE users
+    SET submitted_gift = ?1
+    WHERE discord_id = ?2
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(UPDATE_SUBMISSION)?;
+    query.execute(params![submission_content, santa_id])?;
+    Ok(())
+}
+
+pub async fn get_all_users() -> Result<Vec<UserInfo>> {
+    const GET_USERS: &str = "
+    SELECT * FROM users;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_USERS)?;
+    let user_iter = query.query_map((), |row|
+    Ok(UserInfo {
+        discord_id: row.get(0)?,
+        username: row.get(1)?,
+        character_id: row.get(2)?,
+        letter: row.get(3)?,
+        submission: row.get(4)?,
+    })
+    )?;
+    let mut users: Vec<UserInfo> = Vec::new();
+    for u in user_iter {
+        match u {
+            Ok(user) => {users.push(user)},
+            Err(_) => {continue;},
+        }
+    }
+    Ok(users)
+}
+
+pub async fn get_all_claimed_letters() -> Result<Vec<ClaimedLetter>> {
+    const GET_CLAIMED_LETTERS: &str = "
+    SELECT
+        cl.letter_id,
+        owner.discord_id AS owner_id,
+        owner.username AS owner_name,
+        claimee.discord_id AS claimee_id,
+        claimee.username AS claimee_name
+    FROM claimed_letters cl
+    JOIN users owner ON cl.owner_id = owner.discord_id
+    LEFT JOIN users claimee ON cl.claimee_id = claimee.discord_id;
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_CLAIMED_LETTERS)?;
+    let letter_iter = query.query_map((), |row|
+    Ok(ClaimedLetter {
+        id: row.get(0)?,
+        owner_id: row.get(1)?,
+        owner_name: row.get(2)?,
+        claimee_id: row.get(3)?,
+        claimee_name: row.get(4)?,
+    })
+    )?;
+    let mut letters: Vec<ClaimedLetter> = Vec::new();
+    for l in letter_iter {
+        match l {
+            Ok(letter) => {letters.push(letter)},
+            Err(_) => {continue},
+        }
+    }
+    Ok(letters)
+}
+
+pub async fn get_users_without_giftees() -> Result<Vec<(String, u64)>> {
+    const GET_USERS_WITHOUT_GIFTEES:  &str = "
+    SELECT username, discord_id
+    FROM users
+    WHERE discord_id NOT IN (
+        SELECT claimee_id
+        FROM claimed_letters
+        WHERE claimee_id IS NOT NULL
+    );
+    ";
+    let conn = Connection::open(PATH).map_err(|e| {
+        eprintln!("Failed to open database: {}", e);
+        e
+    })?;
+    let mut query = conn.prepare(GET_USERS_WITHOUT_GIFTEES)?;
+    let mut user_iter = query.query_map((), |row| {
+        let name: String = row.get(0)?;
+        let id: u64 = row.get(1)?;
+        Ok((name, id))
+    })?;
+    let mut users: Vec<(String, u64)> = Vec::new();
+    for user in user_iter {
+        match user {
+            Ok(u) => { users.push(u);},
+            Err(_) => { continue },
+        }
+    }
+    Ok(users)
+} 

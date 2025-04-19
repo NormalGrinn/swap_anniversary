@@ -8,9 +8,6 @@ use ::serenity::all::CreateActionRow;
 use ::serenity::all::CreateButton;
 use ::serenity::all::CreateEmbed;
 use ::serenity::all::CreateEmbedFooter;
-use ::serenity::all::Embed;
-use ::serenity::all::EmbedField;
-use ::serenity::all::EmbedFooter;
 use ::serenity::all::MessageCollector;
 use ::serenity::futures::future::Either;
 use ::serenity::model::colour;
@@ -108,6 +105,63 @@ pub async fn ensure_has_santa(ctx: &Context<'_>) -> Result<bool, serenity::Error
     }
 }
 
+// Returns true if there is NO santa, returns false if there is a santa
+pub async fn ensure_no_santa(ctx: &Context<'_>, giftee: &serenity::User) -> Result<bool, serenity::Error> {
+    let giftee_id = giftee.id.get();
+    match database::check_if_claimed(giftee_id).await {
+        Ok(b) => {
+                        if b {
+                            ctx.send(
+                                CreateReply::default()
+                                    .content("You already have a santa")
+                                    .ephemeral(true),
+                            )
+                            .await?;
+                            return Ok(false);
+                        } else {
+                            return Ok(true)
+                        }
+            }
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("An error occured checking if you have a santa")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
+pub async fn ensure_no_giftee(ctx: &Context<'_>, santa: &serenity::User) -> Result<bool, serenity::Error> {
+    let santa_id = santa.id.get();
+    match database::check_if_has_claimed(santa_id).await {
+        Ok(b) => {
+                        if b {
+                            ctx.send(
+                                CreateReply::default()
+                                    .content("You already have a giftee")
+                                    .ephemeral(true),
+                            )
+                            .await?;
+                            return Ok(false);
+                        } else {
+                            return Ok(true)
+                        }
+            }
+        Err(_) => {
+            ctx.send(
+                CreateReply::default()
+                    .content("An error occured checking if you have a giftee")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(false);
+        },
+    }
+}
+
 pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str) -> Result<bool, serenity::Error> {
     if message.len() > 1000 {
         ctx.send(
@@ -151,6 +205,22 @@ pub async fn ensure_host_role(ctx: &Context<'_>, user: &serenity::User) -> Resul
     }
 
     Ok(res)
+}
+
+pub async fn ensure_correct_phase(ctx: &Context<'_>, allowed_phase: Vec<u64>) -> Result<bool, serenity::Error> {
+    let phase = env::var("PHASE")
+    .expect("Missing `PHASE` env var, see README for more information.");
+    let parsed_phase: u64 = phase.parse().expect("Error parsing phase to integer");
+    if !allowed_phase.contains(&parsed_phase) {
+        ctx.send(
+            CreateReply::default()
+                .content("You are trying to run a command that is not allowed in this phase!")
+                .ephemeral(true),
+        )
+        .await?;
+        return Ok(false)
+    } 
+    Ok(true)
 }
 
 pub async fn wait_for_message_with_cancel(ctx: &Context<'_>, message_content: &str) -> Result<Option<String>, serenity::Error> {
