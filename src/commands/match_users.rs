@@ -18,6 +18,12 @@ pub async fn match_users(
     for giftee in &letters {
         if giftee.claimee_id == None { users_without_santas.push((giftee.owner_id));}
     }
+
+    if the_gifteeless.is_empty() || users_without_santas.is_empty() {
+        ctx.send(CreateReply::default().content("No one to match").ephemeral(true)).await?;
+        return Ok(())
+    }
+
     let gifteeless_set: HashSet<u64> = the_gifteeless.iter().cloned().collect();
     let no_santa_or_giftees: Vec<u64> = users_without_santas
         .iter()
