@@ -38,6 +38,7 @@ async fn main() {
                                 commands::receive::receive(),
                                 commands::submit::submit(),
                                 commands::status::status(),
+                                commands::match_users::match_users(),
                                 ],
                 event_handler: |ctx, event, framework, data| {
                     Box::pin(components::button_interaction::on_component_interaction(ctx, event, framework, data))
