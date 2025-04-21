@@ -1,7 +1,8 @@
-use std::env;
+use std::{collections::HashSet, env, sync::Arc};
 
 use poise::serenity_prelude as serenity;
 use dotenvy::dotenv;
+use tokio::sync::Mutex;
 
 mod database;
 mod commands;
@@ -10,7 +11,9 @@ mod components;
 mod utilities;
 mod api_routes;
 
-struct Data {} // User data, which is stored and accessible in all command invocations
+struct Data {
+    pub pending_users: Arc<Mutex<HashSet<u64>>>,
+} // User data, which is stored and accessible in all command invocations
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
 
@@ -21,6 +24,10 @@ async fn main() {
         .expect("Missing `TOKEN` env var, see README for more information.");
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
+
+    let data = Data {
+        pending_users: Arc::new(Mutex::new(HashSet::new())),
+    };
 
     let bot_task = tokio::spawn(async move {
         let framework = poise::Framework::builder()
@@ -48,7 +55,7 @@ async fn main() {
             .setup(|ctx, _ready, framework| {
                 Box::pin(async move {
                     poise::builtins::register_globally(ctx, &framework.options().commands).await?;
-                    Ok(Data {})
+                    Ok(data)
                 })
             })
             .build();

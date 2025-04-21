@@ -9,6 +9,7 @@ pub async fn read(
     if !ensure_joined(&ctx).await? {return Ok(())}
     if !ensure_dm(&ctx).await? {return Ok(())}
     if !ensure_has_giftee(&ctx).await? {return Ok(())}
+    if !crate::utilities::ensure_correct_phase(&ctx, vec![2,3,4]).await? {return Ok(())}
 
     let letter = get_giftee_letter(ctx.author().id.get()).await;
     match letter {

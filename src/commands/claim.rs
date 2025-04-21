@@ -29,6 +29,7 @@ pub async fn claim(
 ) -> Result<(), Error> {
     if !ensure_joined(&ctx).await? {return Ok(())}
     if !ensure_no_giftee(&ctx, &ctx.author()).await? {return Ok(())}
+    if !crate::utilities::ensure_correct_phase(&ctx, vec![2]).await? {return Ok(())}
 
     let author_id = ctx.author().id.get();
     let owner_id = database::get_user_id_by_char_name(char_name).await?;

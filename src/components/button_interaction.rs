@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use serenity::all::{CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage, CreateMessage, FullEvent, Interaction};
 
 use crate::{database, Data, Error};

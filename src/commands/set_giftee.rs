@@ -17,6 +17,7 @@ pub async fn set_giftee(
     if !ensure_host_role(&ctx, ctx.author()).await? {return Ok(())}
     if !ensure_no_santa(&ctx, &giftee).await? {return Ok(())}
     if !ensure_no_giftee(&ctx, &santa).await? {return Ok(())}
+    if !crate::utilities::ensure_correct_phase(&ctx, vec![2,3]).await? {return Ok(())}
 
     let santa_check = database::check_if_has_claimed(santa.id.get()).await?;
     let giftee_check = database::check_if_claimed(giftee.id.get()).await?;
