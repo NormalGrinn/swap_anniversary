@@ -4,17 +4,25 @@ use std::time::Duration;
 use poise::serenity_prelude as serenity;
 use poise::CreateReply;
 use poise::futures_util::{future::select, StreamExt, FutureExt};
+use ::serenity::all::ButtonStyle;
+use ::serenity::all::ChannelId;
+use ::serenity::all::ComponentInteractionCollector;
 use ::serenity::all::CreateActionRow;
 use ::serenity::all::CreateButton;
 use ::serenity::all::CreateEmbed;
 use ::serenity::all::CreateEmbedFooter;
+use ::serenity::all::CreateInteractionResponse;
+use ::serenity::all::CreateInteractionResponseFollowup;
+use ::serenity::all::CreateInteractionResponseMessage;
 use ::serenity::all::MessageCollector;
+use ::serenity::all::UserId;
 use ::serenity::futures::future::Either;
 use ::serenity::model::colour;
 
 use crate::database;
 use crate::database::get_userinfo_by_id;
 use crate::Context;
+use crate::Error;
 
 pub async fn ensure_dm(ctx: &Context<'_>) -> Result<bool, serenity::Error> {
     let dm_channel = ctx.author().create_dm_channel(&ctx.serenity_context().http).await?;
@@ -223,48 +231,66 @@ pub async fn ensure_correct_phase(ctx: &Context<'_>, allowed_phase: Vec<u64>) ->
     Ok(true)
 }
 
-pub async fn wait_for_message_with_cancel(ctx: &Context<'_>, message_content: &str) -> Result<Option<String>, serenity::Error> {
-    let time_out = Duration::from_secs(300);
-    let cancel_button = CreateButton::new("Cancel")
-        .label("Cancel action")
-        .style(serenity::all::ButtonStyle::Danger);
-    let buttons: Vec<CreateButton> = vec![cancel_button];
-    let action_row = vec![CreateActionRow::Buttons(buttons)];
-    let message = CreateReply::default().content(message_content)
-    .components(action_row);
-    ctx.send(message).await?;
+pub async fn reject_if_already_running<F, Fut>(ctx: &Context<'_>, action: F) -> Result<(), Error>
+where
+    F: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = Result<(), Error>>,
+{
+    let user_id = ctx.author().id.get();
 
-    let user_id = ctx.author().id;
-    let channel_id = ctx.channel_id();
-
-    let mut message_future = MessageCollector::new(ctx)
-    .author_id(user_id)
-    .channel_id(channel_id)
-    .timeout(time_out)
-    .stream();
-
-    let mut cancel_future = serenity::collector::ComponentInteractionCollector::new(ctx)
-    .timeout(time_out)
-    .filter(move |interaction| {
-        interaction.data.custom_id == "Cancel" && interaction.user.id == user_id
-    })
-    .stream();
-
-    let message_fut = message_future.next().fuse();
-    let cancel_fut = cancel_future.next().fuse();
-
-    let result = select(message_fut, cancel_fut).await;
-
-    match result {
-        Either::Left((Some(message), _)) => {
-            return Ok(Some(message.content.clone()))
-        }
-        Either::Right((Some(_cancel), _)) => {
-            ctx.say("Command cancelled").await?;
-        }
-        _ => {
-            ctx.say("Command timed out").await?;
+    {
+        let mut pending = ctx.data().pending_users.lock().await;
+        if !pending.insert(user_id) {
+            ctx.say("You're already running this command. Please finish or cancel it first.").await?;
+            return Ok(());
         }
     }
-    return Ok(None)
+
+    let result = action().await;
+
+    {
+        let mut pending = ctx.data().pending_users.lock().await;
+        pending.remove(&user_id);
+    }
+
+    result
+}
+
+pub async fn wait_for_message_with_cancel(
+    ctx: &Context <'_>,
+    message_content: &str,
+) -> Result<Option<String>, serenity::Error> {
+    // Send the message with a cancel button
+    let channel_id = ctx.channel_id();
+    let user_id = ctx.author().id;
+    let cancel_button = CreateButton::new("cancel_btn")
+        .label("Cancel")
+        .style(ButtonStyle::Danger);
+
+    let action_row = vec![CreateActionRow::Buttons(vec![cancel_button])];
+    let message = CreateReply::default().content(message_content).components(action_row);
+    ctx.send(message).await?;
+
+    let mut message_stream = MessageCollector::new(ctx)
+        .author_id(user_id)
+        .channel_id(channel_id)
+        .stream();
+
+    let mut cancel_stream = ComponentInteractionCollector::new(ctx)
+        .filter(move |interaction| {
+            interaction.data.custom_id == "cancel_btn" && interaction.user.id == user_id
+        })
+        .stream();
+        loop {
+            tokio::select! {
+                Some(msg) = message_stream.next() => {
+                    return Ok(Some(msg.content.clone()));
+                },
+                Some(cancel_interaction) = cancel_stream.next() => {
+                    let interaction_response = CreateInteractionResponseFollowup::new().content("Message canceled");
+                    cancel_interaction.create_followup(ctx.http(), interaction_response).await?;
+                    return Ok(None);
+                }
+            }
+        }
 }

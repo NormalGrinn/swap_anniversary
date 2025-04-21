@@ -47,7 +47,7 @@ pub async fn get_userinfo_by_id(user_id: u64) -> Result<types::UserInfo> {
     Ok(types::UserInfo {
         discord_id: row.get(0)?,
         username: row.get(1)?,
-        character_id: row.get(0)?,
+        character_id: row.get(2)?,
         letter: row.get(3)?,
         submission: row.get(4)?,
     })
