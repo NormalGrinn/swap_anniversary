@@ -59,9 +59,7 @@ pub async fn submit(ctx: Context<'_>) -> Result<(), Error> {
                     }
                 }
             }
-            None => {
-                ctx.say("Cancelled.").await?;
-            }
+            None => {()}
         }
 
         Ok(())

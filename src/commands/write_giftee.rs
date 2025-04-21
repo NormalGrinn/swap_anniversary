@@ -58,9 +58,7 @@ pub async fn write_giftee(ctx: Context<'_>) -> Result<(), Error> {
                     }
                 }
             }
-            None => {
-                ctx.say("Cancelled.").await?;
-            }
+            None => {()}
         }
 
         Ok(())

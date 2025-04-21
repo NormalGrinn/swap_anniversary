@@ -16,11 +16,8 @@ pub async fn write_letter(
                 database::set_letter(ctx.author().id.get(), &msg).await?;
                 ctx.say("Letter updated!").await?;
             },
-            None => {
-                ctx.say("Canceled.").await?;
-            },
+            None => {()},
         }
-
         Ok(())
     }).await
 }

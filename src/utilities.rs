@@ -287,8 +287,13 @@ pub async fn wait_for_message_with_cancel(
                     return Ok(Some(msg.content.clone()));
                 },
                 Some(cancel_interaction) = cancel_stream.next() => {
-                    let interaction_response = CreateInteractionResponseFollowup::new().content("Message canceled");
-                    cancel_interaction.create_followup(ctx.http(), interaction_response).await?;
+                    // Acknowledge the interaction first
+                    let resp = CreateInteractionResponseMessage::new().content("Command canceled");
+                    if let Err(err) = cancel_interaction.create_response(ctx.http(), CreateInteractionResponse::Message(resp)).await {
+                        eprintln!("Error acknowledging cancel interaction: {}", err);
+                    }
+    
+                    // Return None to indicate that the user canceled the action
                     return Ok(None);
                 }
             }
