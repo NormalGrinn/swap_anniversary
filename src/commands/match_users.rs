@@ -9,6 +9,8 @@ pub async fn match_users(
     ctx: Context<'_>,
 ) -> Result<(), Error> {
     if !ensure_host_role(&ctx, ctx.author()).await? {return Ok(())}
+    if !crate::utilities::ensure_correct_phase(&ctx, vec![2]).await? {return Ok(())}
+
     let users_withouth_giftees = database::get_users_without_giftees().await?;
     let mut the_gifteeless: Vec<u64> = users_withouth_giftees.into_iter().map(|(_name, id)| id).collect();
     

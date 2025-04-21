@@ -14,6 +14,7 @@ pub async fn submit(ctx: Context<'_>) -> Result<(), Error> {
         if !ensure_joined(&ctx).await? { return Ok(()); }
         if !ensure_dm(&ctx).await? { return Ok(()); }
         if !ensure_has_giftee(&ctx).await? { return Ok(()); }
+        if !crate::utilities::ensure_correct_phase(&ctx, vec![2,3,4]).await? {return Ok(())}
 
         match wait_for_message_with_cancel(
             &ctx,

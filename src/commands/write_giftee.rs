@@ -14,6 +14,7 @@ pub async fn write_giftee(ctx: Context<'_>) -> Result<(), Error> {
         if !ensure_joined(&ctx).await? { return Ok(()); }
         if !ensure_dm(&ctx).await? { return Ok(()); }
         if !ensure_has_giftee(&ctx).await? { return Ok(()); }
+        if !crate::utilities::ensure_correct_phase(&ctx, vec![2,3,4]).await? {return Ok(())}
 
         let prompt_message = "
         Press the cancel button to cancel the action, otherwise send a message to send something to your giftee (the person you will give something).
