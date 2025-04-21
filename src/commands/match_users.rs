@@ -46,8 +46,8 @@ pub async fn match_users(
             ctx.send(CreateReply::default().content("Can't match a user with themselves, add someone else to the event!").ephemeral(true)).await?;
             return Ok(())
         }
-        claim_letter(no_santa_or_giftees[1], users_without_santas.remove(0)).await?;
-        claim_letter(the_gifteeless.remove(1), no_santa_or_giftees[1]).await?;
+        claim_letter(no_santa_or_giftees[0], users_without_santas.remove(0)).await?;
+        claim_letter(the_gifteeless.remove(0), no_santa_or_giftees[0]).await?;
     }
     for i in 0..the_gifteeless.len() {
         claim_letter(the_gifteeless[i], users_without_santas[i]).await?;

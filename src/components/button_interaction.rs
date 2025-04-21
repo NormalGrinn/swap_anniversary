@@ -36,7 +36,7 @@ pub async fn on_component_interaction(
                             return Ok(())
                         }
 
-                        component_interaction.create_response(&ctx, interaction_response).await?;
+                        // component_interaction.create_response(&ctx, interaction_response).await?;
                         
                         let info = database::get_userinfo_by_id(user_id).await;
                         match info {
