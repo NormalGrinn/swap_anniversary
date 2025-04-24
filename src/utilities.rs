@@ -185,15 +185,29 @@ pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str, lenght:
 }
 
 pub fn embed_builder(message: &str, title: &str, hello_message: &str, goodbye_message: &str) -> serenity::CreateEmbed {
-    let footer = CreateEmbedFooter::new("Swap Anniversary");
+    use serenity::builder::{CreateEmbed, CreateEmbedFooter};
+    use serenity::model::colour::Colour;
 
-    let create_embed = CreateEmbed::new().footer(footer)
-        .field(hello_message, message, false)
-        .field("", goodbye_message, false)
-        .color(colour::Colour::MAGENTA)
+    let footer = CreateEmbedFooter::new("Swap Anniversary");
+    let mut embed = CreateEmbed::new()
+        .footer(footer)
+        .color(Colour::MAGENTA)
         .title(title);
 
-    create_embed
+    let chunks = message
+        .as_bytes()
+        .chunks(1024)
+        .map(|chunk| String::from_utf8_lossy(chunk).to_string())
+        .collect::<Vec<_>>();
+
+    for (i, chunk) in chunks.iter().enumerate() {
+        let name = if i == 0 { hello_message } else { "\u{200B}" };
+        embed = embed.field(name, chunk, false);
+    }
+
+    embed = embed.field("\u{200B}", goodbye_message, false);
+
+    embed
 }
 
 pub async fn ensure_host_role(ctx: &Context<'_>, user: &serenity::User) -> Result<bool, serenity::Error> {
