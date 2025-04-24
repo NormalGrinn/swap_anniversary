@@ -1,4 +1,5 @@
-use crate::{database, utilities::{ensure_dm, ensure_joined}, Context, Error};
+use crate::{database, utilities::{embed_builder, ensure_dm, ensure_joined}, Context, Error};
+use poise::CreateReply;
 use rusqlite::Result;
 
 #[poise::command(prefix_command, track_edits, slash_command)]
@@ -14,6 +15,14 @@ pub async fn read_letter(
             let letter = user_info.letter;
             match letter {
                 Some(l) => {
+                    let giftee_name=  ctx.author().name.clone();
+                    let embed = embed_builder(
+                        &l, 
+                        "What your Santa will see:", 
+                        "Dear Santa", 
+                        &format!("Love, {}", giftee_name));
+                    let reply = CreateReply::default().embed(embed);
+                    ctx.send(reply).await?;
                     ctx.say(l).await?;
                 },
                 None => {
