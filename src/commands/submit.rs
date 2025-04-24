@@ -23,7 +23,7 @@ pub async fn submit(ctx: Context<'_>) -> Result<(), Error> {
         .await?
         {
             Some(message) => {
-                if !ensure_embed_field_lenght(&ctx, &message).await? {
+                if !ensure_embed_field_lenght(&ctx, &message, 1000).await? {
                     return Ok(());
                 }
 

@@ -170,11 +170,12 @@ pub async fn ensure_no_giftee(ctx: &Context<'_>, santa: &serenity::User) -> Resu
     }
 }
 
-pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str) -> Result<bool, serenity::Error> {
-    if message.len() > 1000 {
+pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str, lenght: usize) -> Result<bool, serenity::Error> {
+    if message.len() > lenght {
+        let reply = format!("Your message is over {} characters", lenght);
         ctx.send(
             CreateReply::default()
-                .content("Your message is over 1000 characters")
+                .content(reply)
                 .ephemeral(true),
         )
         .await?;

@@ -23,7 +23,7 @@ pub async fn write_giftee(ctx: Context<'_>) -> Result<(), Error> {
 
         match wait_for_message_with_cancel(&ctx, prompt_message).await? {
             Some(message) => {
-                if !ensure_embed_field_lenght(&ctx, &message).await? {
+                if !ensure_embed_field_lenght(&ctx, &message, 1000).await? {
                     return Ok(());
                 }
 
