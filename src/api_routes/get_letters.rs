@@ -24,6 +24,9 @@ pub fn get_letters() -> impl Filter<Extract = (impl warp::Reply,), Error = warp:
                         if parsed_phase != 4 && l.santa_name.is_some() {
                             l.santa_name = Some("Claimed".to_string());
                         }
+                        if l.santa_name.is_none() {
+                            l.giftee_name = None;
+                        }
                     }
                     let json_reply = json!(letters);
                     Ok(warp::reply::json(&json_reply))
