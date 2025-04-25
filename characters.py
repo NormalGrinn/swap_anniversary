@@ -43,10 +43,21 @@ async def get_character_info(character_id, max_retries=5):
 async def add_character(character_id, name, image_url):
     try:
         con = sqlite3.connect("databases/swapAnniversary.db")
-        con.execute("""
-                    INSERT INTO characters (character_id, character_name, character_image)
-                    VALUES(?, ?, ?);
-                    """, (character_id, name, image_url))  # Corrected column
+        cur = con.cursor()
+
+        # Check for existing character ID
+        cur.execute("SELECT 1 FROM characters WHERE character_id = ?", (character_id,))
+        if cur.fetchone():
+            print(f"Character ID {character_id} already exists. Skipping.")
+            con.close()
+            return
+
+        # Insert if not found
+        cur.execute("""
+            INSERT INTO characters (character_id, character_name, character_image)
+            VALUES (?, ?, ?);
+        """, (character_id, name, image_url))
+        
         con.commit()
         con.close()
         print(f"Character {name} added successfully.")
@@ -54,6 +65,7 @@ async def add_character(character_id, name, image_url):
         print(f"Database integrity error: {e}")
     except Exception as e:
         print(f"Error adding character: {e}")
+
 
 async def main():
     with open("characters.txt") as file:
