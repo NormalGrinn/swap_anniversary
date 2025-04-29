@@ -23,7 +23,6 @@ pub async fn read_letter(
                         &format!("Love, {}", giftee_name));
                     let reply = CreateReply::default().embed(embed);
                     ctx.send(reply).await?;
-                    ctx.say(l).await?;
                 },
                 None => {
                     ctx.say("You have not set your letter yet").await?;
