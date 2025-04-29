@@ -171,7 +171,6 @@ pub async fn ensure_no_giftee(ctx: &Context<'_>, santa: &serenity::User) -> Resu
 }
 
 pub async fn ensure_embed_field_lenght(ctx: &Context<'_>, message: &str, lenght: usize) -> Result<bool, serenity::Error> {
-    println!("Message length: {}", message.len());
     let chars: Vec<char> = message.chars().collect();
     if chars.len() > lenght {
         let reply = format!("Your message is over {} characters", lenght);
