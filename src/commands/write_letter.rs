@@ -8,7 +8,7 @@ pub async fn write_letter(
     reject_if_already_running(&ctx, || async {
         if !ensure_joined(&ctx).await? { return Ok(()); }
         if !ensure_dm(&ctx).await? { return Ok(()); }
-        if !crate::utilities::ensure_correct_phase(&ctx, vec![1,2]).await? {return Ok(())}
+        if !crate::utilities::ensure_correct_phase(&ctx, vec![1]).await? {return Ok(())}
 
         let prompt = "Send your letter or press cancel to abort the action.";
         match wait_for_message_with_cancel(&ctx, prompt).await? {
