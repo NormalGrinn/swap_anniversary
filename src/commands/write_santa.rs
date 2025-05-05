@@ -31,7 +31,7 @@ pub async fn write_santa(ctx: Context<'_>) -> Result<(), Error> {
                         let santa_id = UserId::new(santa);
                         let embed = utilities::embed_builder(
                             &message,
-                            "Your Santa sent you a message",
+                            "Your Giftee sent you a message",
                             "Dear Santa",
                             &format!("Love, {}", ctx.author().name),
                         );
