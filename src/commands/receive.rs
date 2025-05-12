@@ -9,7 +9,7 @@ pub async fn receive(
     if !ensure_joined(&ctx).await? {return Ok(())}
     if !ensure_dm(&ctx).await? {return Ok(())}
     if !ensure_has_santa(&ctx).await? {return Ok(())}
-    if !crate::utilities::ensure_correct_phase(&ctx, vec![4]).await? {return Ok(())}
+    if !crate::utilities::ensure_correct_phase(&ctx, vec![3,4]).await? {return Ok(())}
 
     let author_id = ctx.author().id.get();
 
